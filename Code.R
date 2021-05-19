@@ -108,8 +108,9 @@ en_workflow <- workflow() %>%
   add_recipe(loan_recipe)
 
 # Tuning/fitting ----
-en_tuned <- en_workflow %>% 
-  tune_grid(loan_folds, grid = en_grid)
+#en_tuned <- en_workflow %>% 
+  #tune_grid(loan_folds, grid = en_grid)
+en_tuned <- read_rds("en_results.rds")
 
 # create another recipe
 loan_recipe2 <- 
@@ -143,8 +144,9 @@ rf_workflow <- workflow() %>%
   add_recipe(loan_recipe2)
 
 # Tuning/fitting
-rf_tuned <- rf_workflow %>% 
-  tune_grid(loan_folds, rf_grid)
+#rf_tuned <- rf_workflow %>% 
+  #tune_grid(loan_folds, rf_grid)
+rf_tuned <- read_rds("rf_results.rds")
 
 # Metric performance
 autoplot(en_tuned, metric = "roc_auc")
@@ -154,8 +156,14 @@ select_best(en_tuned, metric = "accuracy")
 show_best(en_tuned, metric = "roc_auc")
 show_best(en_tuned, metric = "accuracy")
 
+autoplot(rf_tuned, metric = "roc_auc")
+autoplot(rf_tuned, metric = "accuracy")
+select_best(rf_tuned, metric = "roc_auc")
+select_best(rf_tuned, metric = "accuracy")
+show_best(rf_tuned, metric = "roc_auc")
+show_best(rf_tuned, metric = "accuracy")
+
 # finalize workflow
-en_tuned <- read_rds("en_results.rds")
 en_workflow_tuned <- en_workflow %>% 
   finalize_workflow(select_best(en_tuned, metric = "roc_auc"))
 
@@ -168,3 +176,14 @@ en_final_results <- en_results %>%
 
 write_csv(en_final_results, "en_output.csv")
 
+rf_workflow_tuned <- rf_workflow %>% 
+  finalize_workflow(select_best(rf_tuned, metric = "roc_auc"))
+
+rf_results <- fit(rf_workflow_tuned, loan_train)
+
+rf_final_results <- rf_results %>% 
+  predict(new_data = loan_test) %>% 
+  bind_cols(loan_test %>% select(id)) %>% 
+  select(id, .pred_class)
+
+write_csv(rf_final_results, "rf_output.csv")
